@@ -169,5 +169,5 @@ GET http://localhost:3000/ready
 
 ## Autor
 
-**Tu Nombre**
+**Julián Hernández**
 [GitHub](https://github.com/Julianhernm)
