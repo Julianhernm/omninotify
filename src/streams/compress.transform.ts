@@ -1,7 +1,9 @@
 import { Transform, TransformCallback } from "node:stream";
 import { gzip } from "node:zlib";
 import { promisify } from "node:util";
+import { createContextLogger } from "../shared/logger/logger";
 
+const log = createContextLogger({ service: 'CompressTransform'})
 const gzipAsync = promisify(gzip);
 
 export class CompressTransform extends Transform {
@@ -11,12 +13,12 @@ export class CompressTransform extends Transform {
 
     async _transform(chunk: Buffer, encoding: BufferEncoding, callback: TransformCallback): Promise<void> {
         try {
-            console.log(`[CompressTransform] Input: ${chunk.length}, bytes`);
+            log.info(`Input: ${chunk.length}, bytes`);
 
             const compressed = await gzipAsync(chunk);
 
-            console.log(`[CompressTransform] Output: ${compressed.length} bytes`);
-            console.log(`[CompressTransform] Ratio: ${((1 - compressed.length / chunk.length) * 100).toFixed(1)}%`)
+            log.info(`Output: ${compressed.length} bytes`);
+            log.info(`Ratio: ${((1 - compressed.length / chunk.length) * 100).toFixed(1)}%`)
 
             this.push(compressed);
             callback()

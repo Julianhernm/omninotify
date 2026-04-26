@@ -1,5 +1,6 @@
 import Redis from "ioredis";
 import { env } from "../config/env";
+import { logger } from "../shared/logger/logger";
 
 function createRedisClient(name: string) {
     const client = new Redis({
@@ -16,15 +17,15 @@ function createRedisClient(name: string) {
     })
 
     client.on('connect', () => {
-        console.log(`Redis client "${name}" connected`);
+        logger.debug(`Redis client "${name}" connected`);
     });
 
     client.on('error', (err) => {
-        console.error(`Redis client "${name}" error:`, err);
+        logger.error(`Redis client "${name}" error:`, err);
     });
 
     client.on('close', () => {
-        console.log(`Redis client "${name}" closed`);
+        logger.debug(`Redis client "${name}" closed`);
     });
 
     return client;

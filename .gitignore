@@ -1,5 +1,22 @@
+# Dependencies
 node_modules/
+
+# Build
 dist/
+
+# Environment
 .env
+
+# Logs
 logs/
 *.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Tests
+coverage/
+
+# Docker
+.dockerignore

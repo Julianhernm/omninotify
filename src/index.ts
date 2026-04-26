@@ -9,9 +9,12 @@ import { publisherClient, subscriberClient } from './worker/redis.client';
 import { QUEUES } from './worker/queue.constants';
 import { runNotificationPipeline } from './streams/notification.pipeline';
 import { createNotification } from './domain/notification.factory';
+import { logger } from './shared/logger/logger';
+import { startHealthServer } from './health/health.server';
+import { gracefulShutdown } from './shared/graceful-shutdown';
 
 async function boostrap(): Promise<void> {
-  console.log('Starting OmniNotify...');
+  logger.info('Starting OmniNotify...', { env: env.nodeEnv });
 
   // 1. Connect to Redis
   await subscriberClient.connect();
@@ -19,7 +22,8 @@ async function boostrap(): Promise<void> {
 
   // 2. Initialize services and consumers
   const notificationService = new NotificationService();
-  notificationService.registerChannel(new EmailChannel());
+  const emailChannel = new EmailChannel
+  notificationService.registerChannel(emailChannel);
   notificationService.registerChannel(new SmsChannel());
   notificationService.registerChannel(new PushChannel());
 
@@ -45,56 +49,34 @@ async function boostrap(): Promise<void> {
   // 5. Start consuming messages
   await notificationConsumer.start();
 
-  setTimeout(() => {
-    console.log('emmiting test events');
+  // 6. Health server
+  const healthServer = startHealthServer();
 
-    eventBus.emit('user.registered', {
-      userId: 'usr-001',
-      email: 'anaexample.com',
-      name: 'Ana García',
-    });
-
-    eventBus.emit('payment.completed', {
-      userId: 'usr-002',
-      email: 'carlos@example.com',
-      amount: 299.99,
-      currency: 'USD',
-      transactionId: 'txn-abc-123',
-    });
-  }, 1000)
-
-  process.on('SIGNIT', async () => {
-    console.log('\n[OmniNotify] turnig off...')
+  // 7. Register shutdown handlers - in reverse order to startup
+  gracefulShutdown.register(async () => {
+    logger.info('Closing consumer...');
     notificationConsumer.stop();
-    await publisherClient.quit();
-    await subscriberClient.quit();
-    console.log('[OmniNotify] Bye.');
-    process.exit(0);
-  })
-  setTimeout(async () => {
-    console.log('\n--- Demo Stream Pipeline ---\n');
+  });
 
-    // Generamos 25 notificaciones de prueba
-    const bulkNotifications = Array.from({ length: 25 }, (_, i) =>
-      createNotification(
-        `evt-bulk-${i}`,
-        i % 3 === 0 ? 'email' : i % 3 === 1 ? 'sms' : 'push',
-        `user${i}@example.com`,
-        `Notificación masiva número ${i + 1}`,
-        `Asunto ${i + 1}`,
-      )
-    );
+  gracefulShutdown.register(async () => {
+    logger.info('Closing pool of workers...');
+    await emailChannel.destroy();
+  });
 
-    await runNotificationPipeline({
-      notifications: bulkNotifications,
-      notificationService,
-      batchSize: 5,
-      onProgress: (processed) => {
-        console.log(`[Progress] ${processed}/${bulkNotifications.length} procesadas`);
-      },
-    });
+  gracefulShutdown.register(async () => {
+    logger.info('Closing health server...');
+    await new Promise<void>((resolve, reject) => {
+      healthServer.close(err => err ? reject(err) : resolve());
+    })
+  });
 
-  }, 6000);
+  //8. Activate OS signal listeners
+  gracefulShutdown.listen();
+
+  logger.info('OmniNotify ready', { port: env.port })
 }
 
-boostrap().catch(console.error);
+boostrap().catch((error) => {
+  console.error('Error fatal at startup: ', error);
+  process.exit(1)
+});

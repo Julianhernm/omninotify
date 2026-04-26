@@ -1,5 +1,6 @@
 import { Worker } from 'worker_threads';
 import path from 'path';
+import { createContextLogger } from '../shared/logger/logger';
 
 interface PoolTask<T, R> {
   data: T;
@@ -13,6 +14,8 @@ interface WorkerState<R> {
   currentResolve?: (result: R) => void;
   currentReject?: (error: Error) => void;
 }
+
+const log = createContextLogger({ service: 'WorkerPool' })
 
 export class WorkerPool<TInput, TResult> {
   private workers: WorkerState<TResult>[] = [];
@@ -28,7 +31,7 @@ export class WorkerPool<TInput, TResult> {
     for (let i = 0; i < this.poolSize; i++) {
       this.createWorker();
     }
-    console.log(`[WorkerPool] Iniciado con ${this.poolSize} workers`);
+    log.info(`Iniciado con ${this.poolSize} workers`);
   }
 
   private createWorker(): void {
@@ -48,7 +51,7 @@ export class WorkerPool<TInput, TResult> {
     });
 
     worker.on('error', (error: any) => {
-      console.error(`[WorkerPool] Worker error:`, error.message);
+      log.error(`Worker error:`, error.message);
       state.busy = false;
       state.currentReject?.(error);
       state.currentResolve = undefined;
@@ -59,7 +62,7 @@ export class WorkerPool<TInput, TResult> {
     // Solo se dispara si el worker muere — lo reemplazamos
     worker.on('exit', (code) => {
       if (code !== 0) {
-        console.warn(`[WorkerPool] Worker murió (código ${code}). Reemplazando...`);
+        log.warn(`Worker murió (código ${code}). Reemplazando...`);
         const index = this.workers.indexOf(state);
         if (index !== -1) this.workers.splice(index, 1);
         this.createWorker();
@@ -77,7 +80,7 @@ export class WorkerPool<TInput, TResult> {
         this.assignTask(availableWorker, { data, resolve, reject });
       } else {
         this.queue.push({ data, resolve, reject });
-        console.log(`[WorkerPool] Sin workers libres. Queue: ${this.queue.length}`);
+        log.info(`Sin workers libres. Queue: ${this.queue.length}`);
       }
     });
   }
@@ -101,7 +104,7 @@ export class WorkerPool<TInput, TResult> {
     await Promise.all(this.workers.map(s => s.worker.terminate()));
     this.workers = [];
     this.queue = [];
-    console.log('[WorkerPool] destroyed');
+    log.info('destroyed');
   }
 
   get stats() {

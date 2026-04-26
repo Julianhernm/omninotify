@@ -1,0 +1,8 @@
+node_modules
+dist
+.env
+*.log
+logs/
+__moks__
+src/**/*.test.ts
+.git

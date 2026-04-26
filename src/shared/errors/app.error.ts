@@ -19,6 +19,8 @@ export enum ErrorCode {
 }
 
 export class AppError extends Error {
+  public readonly isAppError: boolean = true
+
   constructor(
     public readonly code: ErrorCode,
     message: string,
@@ -28,8 +30,6 @@ export class AppError extends Error {
     super(message);
     this.name = 'AppError';
 
-    // Necesario para que instanceof funcione correctamente
-    // cuando se extiende una clase nativa como Error
     Object.setPrototypeOf(this, new.target.prototype);
   }
 
@@ -42,6 +42,16 @@ export class AppError extends Error {
       context: this.context,
     };
   }
+}
+
+//type guard
+export function isAppError(error: unknown): error is AppError {
+  return(
+    typeof error === 'object' &&
+    error !== null &&
+    'isAppError' in error &&
+    (error as AppError).isAppError === true
+  )
 }
 
 export class ChannelError extends AppError {

@@ -1,11 +1,14 @@
 import { Writable, WritableOptions } from "node:stream";
 import type { NotificationDTO } from "../domain/notification.dto";
 import type { NotificationService } from "../sevices/notification.service";
+import { createContextLogger } from "../shared/logger/logger";
 
 interface NotificationWriteableOptions extends WritableOptions {
     notificationService: NotificationService;
     onProgress?: (process: number) => void;
 }
+
+const log = createContextLogger({ service: 'NotificationWritable'})
 
 export class NotificationWritable extends Writable {
     private notificationService: NotificationService;
@@ -24,7 +27,7 @@ export class NotificationWritable extends Writable {
         callback: (error?: Error | null) => void
     ): Promise<void> {
         try {
-            console.log(`[NotificationWritable] processing batch of ${batch.length} notification`);
+            log.info(`processing batch of ${batch.length} notification`);
 
 
             await Promise.allSettled(

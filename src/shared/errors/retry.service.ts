@@ -1,4 +1,4 @@
-import { AppError } from "./app.error";
+import { isAppError } from "./app.error";
 
 interface RetryOptions {
     maxRetries: number;
@@ -26,6 +26,9 @@ export async function withRetry<T>(
         } catch (error) {
             lastError = error instanceof Error ? error : new Error(String(error));
 
+            if (isAppError(error) && !error.retryable){
+                throw error;
+            }
             if (attempt > config.maxRetries) {
                 break
             }

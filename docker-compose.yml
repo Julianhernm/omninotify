@@ -1,0 +1,38 @@
+version: '3.9'
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    volumes:
+      # Persistence — Redis data survives container restarts
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  omninotify:
+    build:
+      context: .
+      target: builder   # We use builder for in dev to have ts-node
+    volumes:
+      # We set up the source code for hot reload
+      - ./src:/app/src
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - REDIS_HOST=redis    # name of service, not localhost
+      - REDIS_PORT=6379
+      - LOG_LEVEL=debug
+    depends_on:
+      redis:
+        condition: service_healthy  # wait for Redis to be ready
+    command: npm run dev
+
+volumes:
+  redis_data:

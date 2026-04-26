@@ -1,10 +1,12 @@
 import { Transform, TransformCallback, TransformOptions } from "node:stream";
 import type { NotificationDTO } from "../domain/notification.dto";
+import { createContextLogger } from "../shared/logger/logger";
 
 interface BatchTransformOptions extends TransformOptions {
     batchSize: number
 }
 
+const log = createContextLogger({ service: 'BatchTransform'})
 export class BatchTransform extends Transform {
     private batch: NotificationDTO[] = [];
     private readonly batchSize: number;
@@ -31,10 +33,10 @@ export class BatchTransform extends Transform {
 
     _flush(callback: TransformCallback): void {
         if(this.batch.length > 0){
-            console.log(`[BatchTransform] flushings final batch of ${this.batch.length} items`);
+            log.info(`flushings final batch of ${this.batch.length} items`);
             this.flushBatch();
         }
-        console.log(`[BatchTransform] Total processed: ${this.processedTotal} notifications`);
+        log.info(`Total processed: ${this.processedTotal} notifications`);
         callback()
     }
 
@@ -43,7 +45,7 @@ export class BatchTransform extends Transform {
         this.processedTotal += currentBatch.length;
         this.batch = [];
 
-        console.log(`[BatchTransform] issuing a batch of ${currentBatch.length} notifications`);
+        log.info(`issuing a batch of ${currentBatch.length} notifications`);
 
         this.push(currentBatch)
     }

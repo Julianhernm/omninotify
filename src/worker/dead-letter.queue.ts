@@ -1,6 +1,8 @@
 import { publisherClient } from "./redis.client";
 import type { NotificationDTO } from "../domain/notification.dto";
+import { createContextLogger } from "../shared/logger/logger";
 
+const log = createContextLogger({ service: 'DLQ' })
 const DLQ_KEY = 'omninotify:dlq';
 const DLQ_MAX_SIZE = 10_000;
 
@@ -28,8 +30,8 @@ export class DeadLetterQueue {
         pipeline.ltrim(DLQ_KEY, 0, DLQ_MAX_SIZE - 1);
         await pipeline.exec()
 
-        console.error(
-            '[DLQ] Notification sent to dead letter queue',
+        log.error(
+            'Notification sent to dead letter queue',
             {
                 id: notification.id,
                 channel: notification.channel,

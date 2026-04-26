@@ -11,7 +11,7 @@ function requiredEnv(key: string): string {
 
 export const env = {
     nodeEnv: (requiredEnv('NODE_ENV') ?? 'development') as 'development' | 'production' | 'test',
-    port: parseInt(process.env.APP_PORT ?? '3000', 10),
+    port: parseInt("3000"),
     redis: {
         host: process.env.REDIS_HOST ?? 'localhost',
         port: parseInt(process.env.REDIS_PORT ?? '6379'),

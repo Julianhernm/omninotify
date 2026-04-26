@@ -5,6 +5,7 @@ import { WorkerPool } from "../../worker/worker.pool";
 import { isEmail } from "validator";
 import { withRetry } from "../../shared/errors/retry.service";
 import { deadLetterQueue } from "../../worker/dead-letter.queue";
+import { createContextLogger } from "../../shared/logger/logger"
 import {
     AppError,
     ChannelError,
@@ -22,6 +23,8 @@ interface WorkerResult {
     durationMs: number;
     error?: string;
 }
+
+const log = createContextLogger({service: "EmailChannel"})
 
 export class EmailChannel implements INotificationChannel {
     readonly name = 'email';
@@ -58,7 +61,7 @@ export class EmailChannel implements INotificationChannel {
                     maxRetries: 3,
                     baseDelayMs: 500,
                     onRetry: (attempt, error, delay) => {
-                        console.warn(
+                        log.warn(
                             `[EmailChanne] Retry ${attempt} for ${notification.id}`,
                             { error: error.message, nextRetryMs: delay }
 
@@ -87,7 +90,7 @@ export class EmailChannel implements INotificationChannel {
                 { notification: notification.id }
             )
         }
-        console.log(`[EmailChannel] sent to ${notification.recipient} in ${result.durationMs}ms`);
+        log.info(`[EmailChannel] sent to ${notification.recipient} in ${result.durationMs}ms`);
     }
 
     async destroy(): Promise<void> {
