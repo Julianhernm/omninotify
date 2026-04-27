@@ -1,121 +1,120 @@
 # OmniNotify
 
-Sistema de notificaciones omnicanal construido con Node.js y TypeScript.
-Recibe eventos de cualquier servicio y los distribuye por email, SMS y push
-notifications de forma escalable, desacoplada y tolerante a fallos.
+A scalable, decoupled omnichannel notification system built with Node.js and
+TypeScript. Receives events from any service and distributes them across email,
+SMS, and push notifications with fault tolerance, automatic retries, and
+dead letter queue support.
 
-## Arquitectura
+## Architecture
 
 ```
-Productores → EventBus → Redis (Queue) → Workers → Canales
-                                                    ├── Email
-                                                    ├── SMS
-                                                    └── Push
+Producers → EventBus → Redis (Queue) → Workers → Channels
+                                                  ├── Email
+                                                  ├── SMS
+                                                  └── Push
 ```
 
-El sistema implementa el patrón productor-consumidor con Redis como message
-broker. Los productores emiten eventos sin conocer a los consumidores.
-Los consumidores procesan notificaciones de forma independiente, con reintentos
-automáticos y dead letter queue para mensajes fallidos.
+OmniNotify implements the producer-consumer pattern with Redis as the message
+broker. Producers emit events without knowing who consumes them. Each channel
+worker processes notifications independently, with automatic retries and a
+dead letter queue for failed messages.
 
-## Tecnologías
+## Tech Stack
 
-| Tecnología | Rol |
+| Technology | Role |
 |---|---|
-| Node.js + TypeScript | Runtime y tipado estático |
-| Redis (ioredis) | Message broker y colas de trabajo |
-| worker_threads | Procesamiento CPU-bound en paralelo |
-| Streams API | Pipeline de notificaciones masivas |
-| Winston | Logging estructurado (JSON en producción) |
-| Jest + ts-jest | Testing unitario |
-| Docker | Containerización |
+| Node.js + TypeScript | Runtime and strict static typing |
+| Redis (ioredis) | Message broker and work queues |
+| worker_threads | Parallel CPU-bound processing |
+| Streams API | High-volume notification pipeline |
+| Winston | Structured logging (JSON in production) |
+| Jest + ts-jest | Unit testing |
+| Docker | Containerization |
 
-## Conceptos implementados
+## Key Concepts
 
-- **Clean Architecture** — separación de dominio, infraestructura y canales
-- **Typed EventEmitter** — bus de eventos con tipado genérico estricto
-- **Worker Pool** — pool de hilos con auto-reemplazo en caso de crash
-- **Backpressure** — control de flujo en el pipeline de streams
-- **Exponential Backoff con Jitter** — reintentos inteligentes sin thundering herd
-- **Dead Letter Queue** — captura de mensajes que agotan sus reintentos
-- **Graceful Shutdown** — cierre ordenado sin pérdida de mensajes
-- **Health Checks** — monitoreo de Redis y memoria en tiempo real
+- **Clean Architecture** — strict separation of domain, infrastructure and channels
+- **Typed EventEmitter** — event bus with strict generic constraints
+- **Worker Pool** — thread pool with automatic replacement on worker crash
+- **Backpressure** — flow control in the streams pipeline
+- **Exponential Backoff with Jitter** — smart retries without thundering herd
+- **Dead Letter Queue** — captures messages that exhaust their retry budget
+- **Graceful Shutdown** — ordered teardown without losing in-flight messages
+- **Health Checks** — real-time Redis latency and memory monitoring
 
-## Estructura del proyecto
+## Project Structure
 
 ```
 src/
-├── config/          # Variables de entorno y configuración
-├── domain/          # Tipos, interfaces y DTOs (sin dependencias externas)
-├── events/          # EventBus tipado y registro de handlers
-├── broker/          # Redis producer, consumer y dead letter queue
-├── channels/        # Implementaciones de email, SMS y push
-├── workers/         # Worker threads y pool de workers
-├── streams/         # Pipeline de notificaciones masivas
-├── services/        # Lógica de negocio central
-├── health/          # Health check server
-└── shared/          # Logger, errores y graceful shutdown
+├── config/          # Environment variables and configuration
+├── domain/          # Types, interfaces and DTOs (no external dependencies)
+├── events/          # Typed EventBus and handler registration
+├── broker/          # Redis producer, consumer and dead letter queue
+├── channels/        # Email, SMS and push implementations
+├── workers/         # Worker threads and worker pool
+├── streams/         # High-volume notification pipeline
+├── services/        # Core business logic
+├── health/          # Health check HTTP server
+└── shared/          # Logger, errors and graceful shutdown
 ```
 
-## Requisitos
+## Requirements
 
 - Node.js 20+
-- Docker y Docker Compose
+- Docker and Docker Compose
 
-## Inicio rápido
+## Quick Start
 
 ```bash
-# Clona el repositorio
-git clone https://github.com/tu-usuario/omninotify.git
+# Clone the repository
+git clone https://github.com/Julianhernm/omninotify.git
 cd omninotify
 
-# Configura las variables de entorno
+# Set up environment variables
 cp .env.example .env
 
-# Levanta el sistema completo
+# Start the full system
 docker-compose up --build
 ```
 
-El sistema arranca en modo desarrollo con hot reload.
+The system starts in development mode with hot reload enabled.
 
-## Sin Docker
+## Without Docker
 
 ```bash
-# Instala dependencias
+# Install dependencies
 npm install
 
-# Necesitas Redis corriendo localmente
+# You need Redis running locally
 # brew install redis && brew services start redis  (Mac)
-# docker run -d -p 6379:6379 redis:7-alpine        (cualquier OS)
+# docker run -d -p 6379:6379 redis:7-alpine        (any OS)
 
-# Desarrollo con hot reload
+# Development with hot reload
 npm run dev
 
-# Compilar y correr en producción
+# Build and run in production mode
 npm run build
 npm start
 ```
 
-## Scripts disponibles
+## Available Scripts
 
 ```bash
-npm run dev          # Desarrollo con hot reload
-npm run build        # Compila TypeScript a JavaScript
-npm start            # Corre el build de producción
-npm test             # Corre los tests unitarios
-npm run test:coverage # Tests con reporte de cobertura
-npm run type-check   # Verifica tipos sin compilar
+npm run dev           # Development with hot reload
+npm run build         # Compile TypeScript to JavaScript
+npm start             # Run the production build
+npm test              # Run unit tests
+npm run test:coverage # Tests with coverage report
+npm run type-check    # Type checking without compilation
 ```
 
 ## Health Check
 
-El sistema expone dos endpoints de monitoreo:
-
 ```bash
-# Estado general del sistema
+# Overall system status
 GET http://localhost:3000/health
 
-# Respuesta ejemplo
+# Example response
 {
   "status": "healthy",
   "timestamp": "2024-01-15T10:23:42.123Z",
@@ -126,48 +125,48 @@ GET http://localhost:3000/health
   }
 }
 
-# Readiness check (para Kubernetes)
+# Readiness probe (for Kubernetes)
 GET http://localhost:3000/ready
 ```
 
-## Flujo de una notificación
+## Notification Flow
 
 ```
-1. Servicio externo emite evento:
+1. External service emits an event:
    eventBus.emit('user.registered', { userId, email, name })
 
-2. NotificationService construye DTOs por canal:
+2. NotificationService builds DTOs per channel:
    → NotificationDTO { channel: 'email', recipient, body }
    → NotificationDTO { channel: 'sms',   recipient, body }
    → NotificationDTO { channel: 'push',  recipient, body }
 
-3. Producer encola en Redis:
+3. Producer enqueues in Redis:
    LPUSH omninotify:queue:email <json>
    LPUSH omninotify:queue:sms   <json>
    LPUSH omninotify:queue:push  <json>
 
-4. Consumer procesa con BRPOP (blocking):
+4. Consumer processes with BRPOP (blocking pop):
    → EmailChannel → WorkerPool → renderTemplate → send
-   → SmsChannel   → send (simulado)
-   → PushChannel  → send (simulado)
+   → SmsChannel   → send (simulated / Twilio ready)
+   → PushChannel  → send (simulated / FCM ready)
 
-5. En caso de fallo:
-   → Reintento con backoff exponencial (máx 3 intentos)
-   → Si agota reintentos → Dead Letter Queue
+5. On failure:
+   → Retry with exponential backoff (max 3 attempts)
+   → If retries exhausted → Dead Letter Queue
 ```
 
-## Variables de entorno
+## Environment Variables
 
-| Variable | Default | Descripción |
+| Variable | Default | Description |
 |---|---|---|
-| `NODE_ENV` | `development` | Ambiente de ejecución |
-| `APP_PORT` | `3000` | Puerto del health server |
-| `REDIS_HOST` | `localhost` | Host de Redis |
-| `REDIS_PORT` | `6379` | Puerto de Redis |
-| `REDIS_DB` | `0` | Base de datos de Redis |
-| `LOG_LEVEL` | `debug` | Nivel de logging |
+| `NODE_ENV` | `development` | Runtime environment |
+| `APP_PORT` | `3000` | Health server port |
+| `REDIS_HOST` | `localhost` | Redis host |
+| `REDIS_PORT` | `6379` | Redis port |
+| `REDIS_DB` | `0` | Redis database index |
+| `LOG_LEVEL` | `debug` | Logging level |
 
-## Autor
+## Author
 
 **Julián Hernández**
-[GitHub](https://github.com/Julianhernm)
+[GitHub](https://github.com/Julianhernm) ·
